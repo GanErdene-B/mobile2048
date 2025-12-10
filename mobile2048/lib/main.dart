@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'home.dart';
+import 'package:mobile2048/theme/app_theme.dart';
+import 'app_router.dart';
 
 void main() {
   runApp(MyApp());
@@ -10,8 +11,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '2048 Game',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Home(),
+      theme: AppTheme.light,
+      debugShowCheckedModeBanner: false,
+      initialRoute: '/',
+      routes: AppRouter.routes,
     );
   }
 }
