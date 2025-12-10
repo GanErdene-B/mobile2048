@@ -9,10 +9,9 @@ class _NewGameDifficultyPageState extends State<NewGameDifficultyPage> {
   int? selected;
 
   final difficulties = [
-    ["Easy", "4x4 Board", "Chill experience"],
-    ["Normal", "4x4 Board", "Standard 2048"],
-    ["Hard", "5x5 Board", "More strategy"],
-    ["Extreme", "6x6 Board", "For pros"],
+    ["Амархан", "Хязгааргүй буцаах", "Хязгааргүй аврах", "Оноо 0.5x"],
+    ["Энгийн", "10 Удаа буцаах", "4 Удаа аврах", "Оноо 1x"],
+    ["Хүнд", "Буцаах боломжгүй", "Аврах боломжгүй", "Оноо 2x"],
   ];
 
   @override
@@ -23,39 +22,128 @@ class _NewGameDifficultyPageState extends State<NewGameDifficultyPage> {
         title: Text("2048"),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: difficulties.length,
-              itemBuilder: (_, i) {
-                return ListTile(
-                  leading: Icon(Icons.grid_4x4),
-                  title: Text(difficulties[i][0]),
-                  subtitle: Text(
-                    "${difficulties[i][1]} • ${difficulties[i][2]}",
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            const Align(alignment: Alignment.centerLeft),
+            const SizedBox(height: 12),
+
+            // container that holds the options, different background + thin white border
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFF5AA5D7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.6),
+                    width: 0.8,
                   ),
-                  trailing: Radio(
-                    value: i,
-                    groupValue: selected,
-                    onChanged: (v) => setState(() => selected = v as int),
-                  ),
-                );
-              },
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: difficulties.length,
+                        itemBuilder: (context, i) {
+                          return Card(
+                            elevation: 2,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => setState(() => selected = i),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 14,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      children: List.generate(
+                                        i + 1,
+                                        (index) => Icon(
+                                          Icons.star,
+                                          size: 24,
+                                          color: Colors.amber,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            difficulties[i][0],
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            difficulties[i][1],
+                                            style: TextStyle(
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                          Text(
+                                            difficulties[i][2],
+                                            style: TextStyle(
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                          Text(
+                                            difficulties[i][3],
+                                            style: TextStyle(
+                                              color: Colors.grey[700],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Radio<int>(
+                                      value: i,
+                                      groupValue: selected,
+                                      onChanged: (v) =>
+                                          setState(() => selected = v),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: selected == null
+                          ? null
+                          : () => Navigator.pushNamed(
+                              context,
+                              "/game",
+                              arguments: selected,
+                            ),
+                      child: const Text("Continue"),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          ElevatedButton(
-            onPressed: selected == null
-                ? null
-                : () => Navigator.pushNamed(
-                    context,
-                    "/game",
-                    arguments: selected,
-                  ),
-            child: Text("Continue"),
-          ),
-          SizedBox(height: 20),
-        ],
+
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }

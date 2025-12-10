@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'pages/opening_page.dart';
 import 'pages/home_page.dart';
 import 'pages/campaign/campaign_page.dart';
-import 'pages/campaign/game_slots_page.dart';
 import 'pages/campaign/new_save_select_difficulty.dart';
 import 'pages/missions/missions_page.dart';
 import 'pages/missions/crazy_numbers_page.dart';
@@ -16,7 +15,6 @@ class AppRouter {
     '/': (_) => OpeningPage(),
     '/home': (_) => HomePage(),
     '/campaign': (_) => CampaignPage(),
-    '/campaign-slots': (_) => GameSlotsPage(),
     '/campaign-new': (_) => NewGameDifficultyPage(),
     '/missions': (_) => MissionsPage(),
     '/crazy-numbers': (_) => CrazyNumbersPage(),

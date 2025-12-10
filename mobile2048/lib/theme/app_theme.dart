@@ -16,10 +16,11 @@ class AppTheme {
     appBarTheme: const AppBarTheme(
       elevation: 0,
       centerTitle: true,
-      backgroundColor: const Color(0xFF233C4B),
+      backgroundColor: const Color(0xFF5069AA),
       foregroundColor: Colors.black,
       titleTextStyle: TextStyle(
-        fontSize: 24,
+        fontFamily: 'Vertica',
+        fontSize: 48,
         fontWeight: FontWeight.bold,
         color: Colors.black,
       ),
@@ -54,8 +55,9 @@ class AppTheme {
 
     // Navigation bar
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      selectedItemColor: Colors.orange,
-      unselectedItemColor: Colors.grey,
+      backgroundColor: Color(0xFF233C4B),
+      selectedItemColor: Color(0xFF91E6F5),
+      unselectedItemColor: Colors.white,
       showUnselectedLabels: true,
       elevation: 8,
       type: BottomNavigationBarType.fixed,
