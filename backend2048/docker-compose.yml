@@ -1,0 +1,50 @@
+﻿services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend2048-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_KEY=uz5y7iu9x1mnf4atz2g8jr4he
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/mobile2048
+    depends_on:
+      - db
+    networks:
+      - backend2048-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  db:
+    image: postgres:15
+    container_name: backend2048-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mobile2048
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend2048-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  backend2048-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
