@@ -5,7 +5,7 @@ import '../game/game_ui.dart';
 import '../services/api_service.dart';
 
 class GamePage extends StatefulWidget {
-  final int size; // e.g., 4 for 4×4 board
+  final int size;
 
   const GamePage({super.key, this.size = 4});
 
@@ -16,14 +16,47 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage> {
   late Board board;
   int bestScore = 0;
-
-  // number of available rewinds; expose for saving
   int undoCount = 10;
+  String difficulty = 'Unknown';
+  bool isRestoredGame = false;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    board = Board(row: widget.size, col: widget.size);
+    // Don't access ModalRoute here; defer to didChangeDependencies
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialize after the widget tree is fully built
+    if (!_initialized) {
+      _initializeGame();
+      _initialized = true;
+    }
+  }
+
+  void _initializeGame() {
+    // Get arguments passed from campaign page
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    
+    if (args != null && args['gameData'] != null) {
+      // Restore from saved game
+      final gameData = args['gameData'];
+      final boardData = gameData['board'];
+      
+      board = Board.fromMap(boardData);
+      bestScore = gameData['bestScore'] ?? 0;
+      undoCount = gameData['undoCount'] ?? 10;
+      difficulty = args['difficulty'] ?? 'Unknown';
+      isRestoredGame = true;
+    } else {
+      // Start new game
+      board = Board(row: widget.size, col: widget.size);
+      difficulty = args?['difficulty'] ?? 'Unknown';
+      isRestoredGame = false;
+    }
   }
 
   // prepare a plain map of everything necessary to save / query the current game
@@ -34,14 +67,14 @@ class _GamePageState extends State<GamePage> {
       'undoCount': undoCount,
       'timestamp': DateTime.now().toIso8601String(),
       'size': widget.size,
+      'difficulty': difficulty,
     };
   }
 
-  // placeholder save method - replace with actual DB call
+  // Save game with optional player name
   Future<void> saveGame() async {
     final payload = getSaveData();
 
-    // Ask for optional player name before sending to backend (simple dialog)
     String? playerName = await showDialog<String?>(
       context: context,
       builder: (ctx) {
@@ -60,16 +93,15 @@ class _GamePageState extends State<GamePage> {
       },
     );
 
-    // include player name if provided
     if (playerName != null) {
       payload['player'] = playerName;
     }
 
     try {
-      // first write locally (optional)
+      // Write locally
       await DatabaseHelper.instance.insertGame(payload);
 
-      // then attempt to send to backend
+      // Send to backend
       final resp = await ApiService.saveGame(payload);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Saved (server ok: ${resp['ok'] == true})')),
@@ -120,12 +152,9 @@ class _GamePageState extends State<GamePage> {
       ),
     ).then((confirmed) {
       if (confirmed == true) {
-        // Reset game state and navigate back to campaign
         try {
           DatabaseHelper.instance.deleteGame(board.row, board.col);
-        } catch (_) {
-          // ignore if DB not available
-        }
+        } catch (_) {}
         Navigator.pushReplacementNamed(context, '/campaign');
       }
     });
@@ -137,22 +166,18 @@ class _GamePageState extends State<GamePage> {
 
     setState(() {
       if (axis == Axis.vertical) {
-        // Negative velocity = swipe up, Positive = swipe down
         if (velocity < 0) {
           board.moveUp();
         } else {
           board.moveDown();
         }
       } else {
-        // Axis.horizontal
-        // Negative velocity = swipe left, Positive = swipe right
         if (velocity < 0) {
           board.moveLeft();
         } else {
           board.moveRight();
         }
       }
-      // Update best score if current exceeds it
       if (board.score > bestScore) {
         bestScore = board.score;
       }
@@ -162,11 +187,13 @@ class _GamePageState extends State<GamePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("2048"), centerTitle: true),
+      appBar: AppBar(
+        title: Text("2048 - $difficulty"),
+        centerTitle: true,
+      ),
       body: GestureDetector(
         onVerticalDragEnd: (details) => handleSwipe(details, Axis.vertical),
         onHorizontalDragEnd: (details) => handleSwipe(details, Axis.horizontal),
-
         child: Column(
           children: [
             const SizedBox(height: 12),
@@ -205,7 +232,7 @@ class _GamePageState extends State<GamePage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            "0",
+                            "$undoCount",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -314,19 +341,16 @@ class _GamePageState extends State<GamePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Rewind button
                   ElevatedButton.icon(
                     onPressed: board.canRewind() ? rewindGame : null,
                     icon: const Icon(Icons.undo),
                     label: Text("Буцаах ($undoCount)"),
                   ),
-                  // Save button
                   ElevatedButton.icon(
                     onPressed: () => saveGame(),
                     icon: const Icon(Icons.save),
                     label: const Text("Хадгалах"),
                   ),
-                  // Delete button
                   ElevatedButton.icon(
                     onPressed: deleteGame,
                     icon: const Icon(Icons.delete),

@@ -143,11 +143,17 @@ class _NewGameDifficultyPageState extends State<NewGameDifficultyPage> {
                     ElevatedButton(
                       onPressed: selected == null
                           ? null
-                          : () => Navigator.pushNamed(
-                              context,
-                              "/game",
-                              arguments: selected,
-                            ),
+                          : () {
+                              final difficultyName = difficulties[selected!][0];
+                              Navigator.pushNamed(
+                                context,
+                                "/game",
+                                arguments: {
+                                  "difficulty": difficultyName,
+                                  "savedGame": false,
+                                },
+                              );
+                            },
                       child: const Text("Continue"),
                     ),
                   ],
