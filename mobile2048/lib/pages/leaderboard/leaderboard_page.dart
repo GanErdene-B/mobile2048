@@ -2,6 +2,18 @@ import 'package:flutter/material.dart';
 import '../../widgets/bottom_nav.dart';
 
 class LeaderboardPage extends StatelessWidget {
+  // expose leaderboard entries for DB / query use
+  List<Map<String, dynamic>> leaderboardData() {
+    // this mirrors the UI list; replace with real data source as needed
+    return List.generate(10, (i) {
+      return {
+        'rank': i + 1,
+        'player': 'Player ${i + 1}',
+        'score': (10 - i) * 2400,
+      };
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

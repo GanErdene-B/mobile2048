@@ -134,6 +134,17 @@ class TaskList extends StatelessWidget {
   final String type;
   TaskList({required this.type});
 
+  // sample tasks (in real app, keep state elsewhere)
+  final List<Task> _tasks = [
+    Task(name: 'Task 1', points: 10, completed: true),
+    Task(name: 'Task 2', points: 20, completed: false),
+  ];
+
+  // expose tasks as plain maps for DB/queries
+  List<Map<String, dynamic>> getTasksState() {
+    return _tasks.map((t) => t.toMap(type: type)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     // white background for the actual task list
@@ -195,5 +206,24 @@ class TaskList extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// simple model useful for serialization / queries
+class Task {
+  final String name;
+  final int points;
+  final bool completed;
+
+  Task({required this.name, required this.points, required this.completed});
+
+  Map<String, dynamic> toMap({String? type}) {
+    return {
+      'type': type ?? 'unknown',
+      'name': name,
+      'points': points,
+      'completed': completed,
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
   }
 }

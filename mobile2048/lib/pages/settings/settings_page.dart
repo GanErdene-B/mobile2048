@@ -10,60 +10,53 @@ class _SettingsPageState extends State<SettingsPage> {
   bool sound = true;
   bool vibration = true;
 
+  // Provide a plain map representation of current settings for DB storage / queries
+  Map<String, dynamic> get settingsData => {
+    'sound': sound,
+    'vibration': vibration,
+    'updatedAt': DateTime.now().toIso8601String(),
+  };
+
+  // placeholder save settings helper
+  void saveSettings() {
+    debugPrint('SETTINGS_SAVE: $settingsData');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       bottomNavigationBar: BottomNav2048(current: 3),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Color(0xFF5AA5D7),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.6),
-                    width: 0.8,
-                  ),
-                ),
-                child: ListView(
-                  children: [
-                    const SizedBox(height: 24),
-                    Column(
-                      children: [
-                        Text(
-                          "2048",
-                          style: TextStyle(
-                            fontSize: 40,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text("Settings", style: TextStyle(fontSize: 22)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SwitchListTile(
-                      title: Text("Sound Effects"),
-                      value: sound,
-                      onChanged: (v) => setState(() => sound = v),
-                    ),
-                    SwitchListTile(
-                      title: Text("Vibration"),
-                      value: vibration,
-                      onChanged: (v) => setState(() => vibration = v),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
+      body: ListView(
+        children: [
+          SizedBox(height: 40),
+          Center(
+            child: Text(
+              "2048",
+              style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
             ),
-          ],
-        ),
+          ),
+          SwitchListTile(
+            title: Text("Sound Effects"),
+            value: sound,
+            onChanged: (v) => setState(() => sound = v),
+          ),
+          SwitchListTile(
+            title: Text("Vibration"),
+            value: vibration,
+            onChanged: (v) => setState(() => vibration = v),
+          ),
+          // optional: small save button to persist settings
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 8.0,
+            ),
+            child: ElevatedButton(
+              onPressed: saveSettings,
+              child: Text('Save settings'),
+            ),
+          ),
+        ],
       ),
     );
   }

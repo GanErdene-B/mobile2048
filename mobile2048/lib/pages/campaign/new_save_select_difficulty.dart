@@ -14,6 +14,20 @@ class _NewGameDifficultyPageState extends State<NewGameDifficultyPage> {
     ["Хүнд", "Буцаах боломжгүй", "Аврах боломжгүй", "Оноо 2x"],
   ];
 
+  // Map representation of the currently selected difficulty (or null if none)
+  Map<String, dynamic>? get selectedDifficultyData {
+    if (selected == null) return null;
+    final d = difficulties[selected!];
+    return {
+      'index': selected,
+      'name': d[0],
+      'rule1': d[1],
+      'rule2': d[2],
+      'multiplier': d[3],
+      'selectedAt': DateTime.now().toIso8601String(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

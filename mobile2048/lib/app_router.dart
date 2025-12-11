@@ -8,7 +8,7 @@ import 'pages/missions/crazy_numbers_page.dart';
 import 'pages/tasks/tasks_page.dart';
 import 'pages/leaderboard/leaderboard_page.dart';
 import 'pages/settings/settings_page.dart';
-// import 'pages/game/game_board_page.dart';
+import 'pages/game_page.dart';
 
 class AppRouter {
   static Map<String, WidgetBuilder> routes = {
@@ -21,6 +21,6 @@ class AppRouter {
     '/tasks': (_) => TasksPage(),
     '/leaderboard': (_) => LeaderboardPage(),
     '/settings': (_) => SettingsPage(),
-    // '/game': (_) => GameBoardPage(),
+    '/game': (_) => GamePage(),
   };
 }

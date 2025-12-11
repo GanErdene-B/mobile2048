@@ -8,6 +8,14 @@ class CampaignPage extends StatelessWidget {
     {"saved": false, "score": 0, "difficulty": ""},
   ];
 
+  // return campaign/save-slot state for DB or queries
+  Map<String, dynamic> campaignState() {
+    return {
+      'slots': slots.map((s) => Map<String, dynamic>.from(s)).toList(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
