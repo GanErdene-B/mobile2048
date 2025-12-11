@@ -1,17 +1,37 @@
 import 'package:flutter/material.dart';
 import '../../widgets/bottom_nav.dart';
+import '../../services/api_service.dart';
 
-class LeaderboardPage extends StatelessWidget {
-  // expose leaderboard entries for DB / query use
-  List<Map<String, dynamic>> leaderboardData() {
-    // this mirrors the UI list; replace with real data source as needed
-    return List.generate(10, (i) {
-      return {
-        'rank': i + 1,
-        'player': 'Player ${i + 1}',
-        'score': (10 - i) * 2400,
-      };
-    });
+class LeaderboardPage extends StatefulWidget {
+  const LeaderboardPage({super.key});
+  @override
+  _LeaderboardPageState createState() => _LeaderboardPageState();
+}
+
+class _LeaderboardPageState extends State<LeaderboardPage> {
+  List<Map<String, dynamic>> entries = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLeaderboard();
+  }
+
+  Future<void> _loadLeaderboard() async {
+    try {
+      final rows = await ApiService.getLeaderboard();
+      setState(() {
+        entries = rows;
+        loading = false;
+      });
+    } catch (e) {
+      setState(() => loading = false);
+      // Keep entries empty on error and show a SnackBar
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load leaderboard: $e')));
+      });
+    }
   }
 
   @override
@@ -48,16 +68,21 @@ class LeaderboardPage extends StatelessWidget {
                     Text("Leaderboards", style: TextStyle(fontSize: 22)),
                     const SizedBox(height: 12),
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: 10,
-                        itemBuilder: (_, i) {
-                          return ListTile(
-                            leading: Text("#${i + 1}"),
-                            title: Text("Player ${i + 1}"),
-                            trailing: Text("${(10 - i) * 2400} pts"),
-                          );
-                        },
-                      ),
+                      child: loading
+                          ? const Center(child: CircularProgressIndicator())
+                          : entries.isEmpty
+                              ? const Center(child: Text('No leaderboard entries'))
+                              : ListView.builder(
+                                  itemCount: entries.length,
+                                  itemBuilder: (_, i) {
+                                    final e = entries[i];
+                                    return ListTile(
+                                      leading: Text("#${i + 1}"),
+                                      title: Text(e['player'] ?? 'Player'),
+                                      trailing: Text("${e['score'] ?? 0} pts"),
+                                    );
+                                  },
+                                ),
                     ),
                   ],
                 ),

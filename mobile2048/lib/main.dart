@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:mobile2048/theme/app_theme.dart';
 import 'app_router.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
+import 'package:mobile2048/services/sqflite_init.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // initialize sqlite/ffi on desktop platforms (no-op on web/mobile)
+  try {
+    await initSqfliteFfi();
+  } catch (e) {
+    // initialization failed — continue; DatabaseHelper will surface errors if used incorrectly
+    debugPrint('sqflite init error: $e');
+  }
+
   runApp(MyApp());
 }
 

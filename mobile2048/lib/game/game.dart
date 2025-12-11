@@ -5,6 +5,9 @@ class Board {
   int col;
   int score = 0;
 
+  // History stack for undo/rewind functionality
+  final List<Map<String, dynamic>> _history = [];
+
   Board({required this.row, required this.col}) {
     initBoard();
   }
@@ -20,7 +23,37 @@ class Board {
       ),
     );
     score = 0;
+    _history.clear();
     randomEmptyTile(2);
+    _saveToHistory();
+  }
+
+  // Save current board state to history before a move
+  void _saveToHistory() {
+    _history.add({
+      'board': toMap(),
+      'score': score,
+    });
+  }
+
+  // Rewind to the previous state (undo last move)
+  bool canRewind() => _history.length > 1;
+
+  void rewind() {
+    if (!canRewind()) return;
+    _history.removeLast(); // remove current state
+    final prev = _history.last;
+    final boardMap = prev['board'] as Map<String, dynamic>;
+
+    // Restore tiles directly without re-initializing the board
+    final tilesData = (boardMap['tiles'] as List).cast<List<dynamic>>();
+    for (int rr = 0; rr < row; rr++) {
+      for (int cc = 0; cc < col; cc++) {
+        final tileMap = (tilesData[rr] as List)[cc] as Map<String, dynamic>;
+        gameBoard[rr][cc] = Tile.fromMap(tileMap);
+      }
+    }
+    score = prev['score'] as int;
   }
 
   void randomEmptyTile(int count) {
@@ -149,6 +182,7 @@ class Board {
     if (!canMoveLeft()) {
       return;
     }
+    _saveToHistory();
     for (int r = 0; r < row; r++) {
       for (int c = 0; c < col; c++) {
         mergeLeft(r, c);
@@ -162,6 +196,7 @@ class Board {
     if (!canMoveRight()) {
       return;
     }
+    _saveToHistory();
     for (int r = 0; r < row; r++) {
       for (int c = col - 1; c >= 0; c--) {
         mergeRight(r, c);
@@ -175,6 +210,7 @@ class Board {
     if (!canMoveUp()) {
       return;
     }
+    _saveToHistory();
     for (int c = 0; c < col; c++) {
       for (int r = 0; r < row; r++) {
         mergeUp(r, c);
@@ -188,6 +224,7 @@ class Board {
     if (!canMoveDown()) {
       return;
     }
+    _saveToHistory();
     for (int c = 0; c < col; c++) {
       for (int r = row - 1; r >= 0; r--) {
         mergeDown(r, c);

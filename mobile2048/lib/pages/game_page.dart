@@ -1,6 +1,8 @@
+import '../services/database_helper.dart';
 import 'package:flutter/material.dart';
 import '../game/game.dart';
 import '../game/game_ui.dart';
+import '../services/api_service.dart';
 
 class GamePage extends StatefulWidget {
   final int size; // e.g., 4 for 4×4 board
@@ -16,7 +18,7 @@ class _GamePageState extends State<GamePage> {
   int bestScore = 0;
 
   // number of available rewinds; expose for saving
-  int undoCount = 0;
+  int undoCount = 10;
 
   @override
   void initState() {
@@ -38,8 +40,95 @@ class _GamePageState extends State<GamePage> {
   // placeholder save method - replace with actual DB call
   Future<void> saveGame() async {
     final payload = getSaveData();
-    // TODO: send payload to DB here. For now just print so it's query-able during testing.
-    debugPrint('SAVE_PAYLOAD: $payload');
+
+    // Ask for optional player name before sending to backend (simple dialog)
+    String? playerName = await showDialog<String?>(
+      context: context,
+      builder: (ctx) {
+        String name = '';
+        return AlertDialog(
+          title: const Text('Save game'),
+          content: TextField(
+            decoration: const InputDecoration(labelText: 'Player name (optional)'),
+            onChanged: (v) => name = v,
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(name.trim().isEmpty ? null : name.trim()), child: const Text('Save')),
+          ],
+        );
+      },
+    );
+
+    // include player name if provided
+    if (playerName != null) {
+      payload['player'] = playerName;
+    }
+
+    try {
+      // first write locally (optional)
+      await DatabaseHelper.instance.insertGame(payload);
+
+      // then attempt to send to backend
+      final resp = await ApiService.saveGame(payload);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved (server ok: ${resp['ok'] == true})')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: $e')),
+      );
+    }
+  }
+
+  // Rewind the last move
+  void rewindGame() {
+    if (!board.canRewind()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No moves to rewind')),
+      );
+      return;
+    }
+
+    setState(() {
+      board.rewind();
+      undoCount--;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Rewound! Rewinds left: $undoCount')),
+    );
+  }
+
+  // Delete the current save and return to campaign page
+  void deleteGame() {
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Save'),
+        content: const Text('Are you sure? This will reset all progress and return you to the save selection screen.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed == true) {
+        // Reset game state and navigate back to campaign
+        try {
+          DatabaseHelper.instance.deleteGame(board.row, board.col);
+        } catch (_) {
+          // ignore if DB not available
+        }
+        Navigator.pushReplacementNamed(context, '/campaign');
+      }
+    });
   }
 
   void handleSwipe(DragEndDetails details, Axis axis) {
@@ -227,25 +316,21 @@ class _GamePageState extends State<GamePage> {
                 children: [
                   // Rewind button
                   ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: implement rewind logic
-                    },
-                    icon: Icon(Icons.undo),
-                    label: Text("Буцаах"),
+                    onPressed: board.canRewind() ? rewindGame : null,
+                    icon: const Icon(Icons.undo),
+                    label: Text("Буцаах ($undoCount)"),
                   ),
                   // Save button
                   ElevatedButton.icon(
                     onPressed: () => saveGame(),
-                    icon: Icon(Icons.save),
-                    label: Text("Хадгалах"),
+                    icon: const Icon(Icons.save),
+                    label: const Text("Хадгалах"),
                   ),
                   // Delete button
                   ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: implement delete logic
-                    },
-                    icon: Icon(Icons.delete),
-                    label: Text("Устгах"),
+                    onPressed: deleteGame,
+                    icon: const Icon(Icons.delete),
+                    label: const Text("Устгах"),
                   ),
                 ],
               ),

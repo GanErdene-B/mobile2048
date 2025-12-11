@@ -35,6 +35,18 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # Networking to call backend API
+  http: ^0.13.0
+
+  # Local SQLite persistence
+  sqflite: ^2.0.0
+
+  # File path helpers
+  path: ^1.8.0
+
+  # Optional: desktop SQLite support (use and initialize sqflite_common_ffi on desktop)
+  sqflite_common_ffi: ^2.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
