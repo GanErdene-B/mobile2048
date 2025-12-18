@@ -4,9 +4,14 @@ import 'app_router.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mobile2048/services/sqflite_init.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (kIsWeb) {
+    await Hive.initFlutter();
+  }
 
   // initialize sqlite/ffi on desktop platforms (no-op on web/mobile)
   try {

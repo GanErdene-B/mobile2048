@@ -47,6 +47,13 @@ dependencies:
   # Optional: desktop SQLite support (use and initialize sqflite_common_ffi on desktop)
   sqflite_common_ffi: ^2.0.0
 
+  # Web-compatible database
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # UUID package for generating unique identifiers
+  uuid: ^4.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -88,24 +88,29 @@ function saveData(data) {
   }
 }
 
-// POST /api/save
-// Require API key for save to avoid unauthorized writes.
+// POST /api/save (create or update by id)
 app.post('/api/save', requireApiKey, (req, res) => {
   const payload = req.body || {};
   const data = loadData();
 
-  // store the game
+  let gameId = payload.id;
+  if (!gameId) {
+    gameId = Date.now().toString();
+    payload.id = gameId;
+  }
+
+  // Remove any existing game with this id
+  data.games = (data.games || []).filter(g => g.id !== gameId);
+
+  // Store the game
   const gameRecord = {
-    id: Date.now(),
-    data: payload,
-    bestScore: payload.bestScore || 0,
-    undoCount: payload.undoCount || 0,
+    id: gameId,
+    ...payload,
     timestamp: payload.timestamp || new Date().toISOString(),
-    size: payload.size || 4
   };
   data.games.push(gameRecord);
 
-  // optional: if payload includes player & bestScore, update leaderboard
+  // Optional: update leaderboard
   if (payload.player && typeof payload.bestScore === 'number') {
     data.leaderboard.push({
       id: Date.now() + 1,
@@ -113,11 +118,32 @@ app.post('/api/save', requireApiKey, (req, res) => {
       score: payload.bestScore,
       timestamp: payload.timestamp || new Date().toISOString()
     });
-    // keep only top N sorted later on read
   }
 
   saveData(data);
   return res.status(201).json({ ok: true, saved: gameRecord });
+});
+
+// DELETE /api/games/:id (delete by id)
+app.delete('/api/games/:id', requireApiKey, (req, res) => {
+  const id = req.params.id;
+  const data = loadData();
+  const before = data.games.length;
+  data.games = (data.games || []).filter(g => g.id !== id);
+  saveData(data);
+  return res.json({ ok: true, deleted: before - data.games.length });
+});
+
+// GET /api/games/:id (fetch by id)
+app.get('/api/games/:id', (req, res) => {
+  const id = req.params.id;
+  const data = loadData();
+  const game = (data.games || []).find(g => g.id === id);
+  if (game) {
+    return res.json({ ok: true, game });
+  } else {
+    return res.status(404).json({ ok: false, error: 'Not found' });
+  }
 });
 
 // GET /api/leaderboard
@@ -141,6 +167,8 @@ app.get('/api/health', (req, res) => {
 app.get('/api/games', (req, res) => {
   const data = loadData();
   const games = Array.isArray(data.games) ? data.games.slice() : [];
+  // Return only the latest 50, sorted by timestamp desc
+  games.sort((a, b) => (b.timestamp || 0).localeCompare(a.timestamp || 0));
   return res.json({ ok: true, games: games.slice(0, 50) });
 });
 

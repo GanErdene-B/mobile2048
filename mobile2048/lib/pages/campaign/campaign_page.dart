@@ -20,39 +20,36 @@ class _CampaignPageState extends State<CampaignPage> {
   Future<void> _loadSavedGames() async {
     try {
       // Try to load from backend first
-      final games = await ApiService.getSavedGames();
+      final games = await DatabaseHelper.instance.getSavedGames();
 
-      // Initialize 4 slots (0-3)
-      final newSlots = List.generate(4, (i) => {
-            'saved': false,
-            'score': 0,
-            'difficulty': '',
-            'player': '',
-            'data': null,
-            'id': null,
-          });
+      // Map slotIndex to save
+      final newSlots = List.generate(
+        4,
+        (i) => {
+          'saved': false,
+          'score': 0,
+          'difficulty': '',
+          'player': '',
+          'id': null,
+        },
+      );
 
-      // Fill slots with saved games (take first 4 games, sorted by most recent)
-      for (int i = 0; i < games.length && i < 4; i++) {
-        final game = games[i];
-        final gameData = game['data'] is String
-            ? (game['data'] as String).isNotEmpty ? game['data'] : game
-            : game;
-
-        newSlots[i] = {
-          'saved': true,
-          'score': game['bestScore'] ?? 0,
-          'difficulty': gameData is Map
-              ? (gameData['difficulty'] ?? 'Unknown')
-              : 'Unknown',
-          'player': gameData is Map
-              ? (gameData['player'] ?? 'Player')
-              : (game['player'] ?? 'Player'),
-          'data': game,
-          'id': game['id'],
-        };
+      for (final game in games) {
+        final slotIndex = game['slotIndex'] is int
+            ? game['slotIndex'] as int
+            : null;
+        if (slotIndex != null && slotIndex >= 0 && slotIndex < 4) {
+          newSlots[slotIndex] = {
+            'saved': true,
+            'score': game['bestScore'] ?? 0,
+            'difficulty': game['difficulty'] ?? 'Unknown',
+            'player': game['player'] ?? 'Player',
+            'id': game['id'],
+          };
+        }
       }
 
+      if (!mounted) return;
       setState(() {
         slots = newSlots;
         loading = false;
@@ -60,15 +57,18 @@ class _CampaignPageState extends State<CampaignPage> {
     } catch (e) {
       debugPrint('Error loading saved games: $e');
       // Fall back to empty slots
+      if (!mounted) return;
       setState(() {
-        slots = List.generate(4, (i) => {
-              'saved': false,
-              'score': 0,
-              'difficulty': '',
-              'player': '',
-              'data': null,
-              'id': null,
-            });
+        slots = List.generate(
+          4,
+          (i) => {
+            'saved': false,
+            'score': 0,
+            'difficulty': '',
+            'player': '',
+            'id': null,
+          },
+        );
         loading = false;
       });
     }
@@ -77,12 +77,16 @@ class _CampaignPageState extends State<CampaignPage> {
   // return campaign/save-slot state for DB or queries
   Map<String, dynamic> campaignState() {
     return {
-      'slots': slots.map((s) => {
-            'saved': s['saved'],
-            'score': s['score'],
-            'difficulty': s['difficulty'],
-            'player': s['player'],
-          }).toList(),
+      'slots': slots
+          .map(
+            (s) => {
+              'saved': s['saved'],
+              'score': s['score'],
+              'difficulty': s['difficulty'],
+              'player': s['player'],
+            },
+          )
+          .toList(),
       'updatedAt': DateTime.now().toIso8601String(),
     };
   }
@@ -120,8 +124,8 @@ class _CampaignPageState extends State<CampaignPage> {
                           final slot = slots[index];
                           return GestureDetector(
                             onTap: () {
-                              if (slot["saved"]) {
-                                // Continue existing game
+                              if (slot["saved"] && slot["id"] != null) {
+                                // Continue existing game by id
                                 Navigator.pushNamed(
                                   context,
                                   "/game",
@@ -129,7 +133,7 @@ class _CampaignPageState extends State<CampaignPage> {
                                     "slotIndex": index,
                                     "difficulty": slot["difficulty"],
                                     "savedGame": true,
-                                    "gameData": slot["data"],
+                                    "id": slot["id"],
                                   },
                                 );
                               } else {
@@ -182,7 +186,9 @@ class _CampaignPageState extends State<CampaignPage> {
                                       const SizedBox(height: 4),
                                       Text("Хэрэглэгч: ${slot["player"]}"),
                                     ] else
-                                      Text("Slot ${index + 1} - Шинэ тоглоом эхлүүлнэ үү"),
+                                      Text(
+                                        "Slot ${index + 1} - Шинэ тоглоом эхлүүлнэ үү",
+                                      ),
                                   ],
                                 ),
                               ),

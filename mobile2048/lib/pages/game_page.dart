@@ -27,47 +27,63 @@ class _GamePageState extends State<GamePage> {
     // Don't access ModalRoute here; defer to didChangeDependencies
   }
 
+  String? saveId;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Initialize after the widget tree is fully built
     if (!_initialized) {
-      _initializeGame();
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      saveId = args != null && args['id'] != null ? args['id'] as String : null;
+      _initializeGame(args);
       _initialized = true;
     }
   }
 
-  void _initializeGame() {
-    // Get arguments passed from campaign page
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    
-    if (args != null && args['gameData'] != null) {
-      // Restore from saved game
-      final gameData = args['gameData'];
-      final boardData = gameData['board'];
-      
-      board = Board.fromMap(boardData);
-      bestScore = gameData['bestScore'] ?? 0;
-      undoCount = gameData['undoCount'] ?? 10;
-      difficulty = args['difficulty'] ?? 'Unknown';
-      isRestoredGame = true;
-    } else {
-      // Start new game
+  void _initializeGame(Map<String, dynamic>? args) async {
+    if (saveId != null) {
+      // Load from DB by id
+      final gameData = await DatabaseHelper.instance.getGameById(saveId!);
+      if (gameData != null &&
+          gameData['board'] != null &&
+          gameData['board'] is Map<String, dynamic>) {
+        setState(() {
+          board = Board.fromMap(gameData['board']);
+          bestScore = gameData['bestScore'] ?? 0;
+          undoCount = gameData['undoCount'] ?? 10;
+          difficulty = gameData['difficulty'] ?? 'Unknown';
+          isRestoredGame = true;
+        });
+        return;
+      }
+    }
+    // Start new game
+    setState(() {
       board = Board(row: widget.size, col: widget.size);
       difficulty = args?['difficulty'] ?? 'Unknown';
       isRestoredGame = false;
-    }
+    });
   }
 
   // prepare a plain map of everything necessary to save / query the current game
   Map<String, dynamic> getSaveData() {
     return {
+      'id': saveId,
+      'slotIndex':
+          (ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?)?['slotIndex'] ??
+          0,
       'board': board.toMap(),
       'bestScore': bestScore,
       'undoCount': undoCount,
       'timestamp': DateTime.now().toIso8601String(),
       'size': widget.size,
       'difficulty': difficulty,
+      'player':
+          (ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?)?['player'] ??
+          '',
     };
   }
 
@@ -82,12 +98,22 @@ class _GamePageState extends State<GamePage> {
         return AlertDialog(
           title: const Text('Save game'),
           content: TextField(
-            decoration: const InputDecoration(labelText: 'Player name (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Player name (optional)',
+            ),
             onChanged: (v) => name = v,
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: const Text('Cancel')),
-            TextButton(onPressed: () => Navigator.of(ctx).pop(name.trim().isEmpty ? null : name.trim()), child: const Text('Save')),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(null),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(
+                ctx,
+              ).pop(name.trim().isEmpty ? null : name.trim()),
+              child: const Text('Save'),
+            ),
           ],
         );
       },
@@ -98,27 +124,34 @@ class _GamePageState extends State<GamePage> {
     }
 
     try {
-      // Write locally
-      await DatabaseHelper.instance.insertGame(payload);
-
-      // Send to backend
-      final resp = await ApiService.saveGame(payload);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Saved (server ok: ${resp['ok'] == true})')),
-      );
+      // Write locally (update if id exists, insert if not)
+      if (saveId != null) {
+        await DatabaseHelper.instance.insertGame(payload);
+      } else {
+        final newId =
+            await DatabaseHelper.instance.insertGame(payload) as String;
+        setState(() {
+          saveId = newId;
+        });
+      }
+      // Optionally: Send to backend
+      // final resp = await ApiService.saveGame(payload);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Saved!')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Save failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
     }
   }
 
   // Rewind the last move
   void rewindGame() {
     if (!board.canRewind()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No moves to rewind')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No moves to rewind')));
       return;
     }
 
@@ -138,7 +171,9 @@ class _GamePageState extends State<GamePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Save'),
-        content: const Text('Are you sure? This will reset all progress and return you to the save selection screen.'),
+        content: const Text(
+          'Are you sure? This will reset all progress and return you to the save selection screen.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -150,10 +185,11 @@ class _GamePageState extends State<GamePage> {
           ),
         ],
       ),
-    ).then((confirmed) {
-      if (confirmed == true) {
+    ).then((confirmed) async {
+      if (confirmed == true && saveId != null) {
         try {
-          DatabaseHelper.instance.deleteGame(board.row, board.col);
+          await DatabaseHelper.instance.deleteGameById(saveId!);
+          await ApiService.deleteGameById(saveId!);
         } catch (_) {}
         Navigator.pushReplacementNamed(context, '/campaign');
       }
@@ -187,10 +223,7 @@ class _GamePageState extends State<GamePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("2048 - $difficulty"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text("2048 - $difficulty"), centerTitle: true),
       body: GestureDetector(
         onVerticalDragEnd: (details) => handleSwipe(details, Axis.vertical),
         onHorizontalDragEnd: (details) => handleSwipe(details, Axis.horizontal),
